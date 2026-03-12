@@ -13,17 +13,18 @@ import { Plus, Package, AlertTriangle, Edit, ArrowUpDown } from 'lucide-react'
 export const dynamic = 'force-dynamic'
 
 interface PageProps {
-  searchParams: { search?: string; category?: string; lowStock?: string; page?: string }
+  searchParams: Promise<{ search?: string; category?: string; lowStock?: string; page?: string }>
 }
 
 export default async function InventoryPage({ searchParams }: PageProps) {
   const session = await getServerSession(authOptions)
   const canEdit = ['ADMIN', 'WAREHOUSE_MANAGER'].includes(session?.user?.role ?? '')
 
-  const search     = searchParams.search ?? ''
-  const categoryId = searchParams.category ?? ''
-  const lowStock   = searchParams.lowStock === 'true'
-  const page       = Math.max(1, Number(searchParams.page ?? 1))
+  const sp = await searchParams
+  const search     = sp.search ?? ''
+  const categoryId = sp.category ?? ''
+  const lowStock   = sp.lowStock === 'true'
+  const page       = Math.max(1, Number(sp.page ?? 1))
   const limit      = 20
 
   const where: any = {}
