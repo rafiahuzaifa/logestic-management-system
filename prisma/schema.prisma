@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  WAREHOUSE_MANAGER
+  SALES_MANAGER
+  LOGISTICS_OFFICER
+  VIEWER
+}
+
+enum PurchaseOrderStatus {
+  PENDING
+  APPROVED
+  RECEIVED
+  CANCELLED
+}
+
+enum SalesOrderStatus {
+  DRAFT
+  CONFIRMED
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum ShipmentStatus {
+  PENDING
+  IN_TRANSIT
+  DELIVERED
+  DELAYED
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+enum InvoicePaidStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(VIEWER)
+  createdAt DateTime @default(now())
+
+  purchaseOrders PurchaseOrder[]
+  salesOrders    SalesOrder[]
+  grns           GRN[]
+  auditLogs      AuditLog[]
+  watchers       Watcher[]
+
+  @@map("users")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id                String   @id @default(cuid())
+  name              String
+  sku               String   @unique
+  categoryId        String
+  unit              String
+  price             Decimal  @db.Decimal(12, 2)
+  reorderLevel      Int
+  currentStock      Int      @default(0)
+  warehouseLocation String?
+  createdAt         DateTime @default(now())
+
+  category       Category        @relation(fields: [categoryId], references: [id])
+  poLineItems    POLineItem[]
+  soLineItems    SOLineItem[]
+  stockMovements StockMovement[]
+
+  @@map("products")
+}
+
+model Supplier {
+  id           String  @id @default(cuid())
+  name         String
+  email        String  @unique
+  phone        String?
+  address      String?
+  rating       Decimal @default(0) @db.Decimal(3, 1)
+  leadTimeDays Int     @default(7)
+
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
+}
+
+model PurchaseOrder {
+  id          String              @id @default(cuid())
+  supplierId  String
+  status      PurchaseOrderStatus @default(PENDING)
+  totalAmount Decimal             @db.Decimal(14, 2)
+  createdById String
+  createdAt   DateTime            @default(now())
+
+  supplier    Supplier     @relation(fields: [supplierId], references: [id])
+  createdBy   User         @relation(fields: [createdById], references: [id])
+  lineItems   POLineItem[]
+  grns        GRN[]
+
+  @@map("purchase_orders")
+}
+
+model POLineItem {
+  id              String  @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  unitPrice       Decimal @db.Decimal(12, 2)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id])
+
+  @@map("po_line_items")
+}
+
+model GRN {
+  id              String   @id @default(cuid())
+  purchaseOrderId String
+  receivedById    String
+  receivedAt      DateTime @default(now())
+  notes           String?
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  receivedBy    User          @relation(fields: [receivedById], references: [id])
+
+  @@map("grns")
+}
+
+model Customer {
+  id      String  @id @default(cuid())
+  name    String
+  email   String  @unique
+  phone   String?
+  address String?
+
+  salesOrders SalesOrder[]
+
+  @@map("customers")
+}
+
+model SalesOrder {
+  id          String           @id @default(cuid())
+  customerId  String
+  status      SalesOrderStatus @default(DRAFT)
+  totalAmount Decimal          @db.Decimal(14, 2)
+  createdById String
+  createdAt   DateTime         @default(now())
+
+  customer   Customer     @relation(fields: [customerId], references: [id])
+  createdBy  User         @relation(fields: [createdById], references: [id])
+  lineItems  SOLineItem[]
+  invoices   Invoice[]
+  shipments  Shipment[]
+
+  @@map("sales_orders")
+}
+
+model SOLineItem {
+  id           String  @id @default(cuid())
+  salesOrderId String
+  productId    String
+  quantity     Int
+  unitPrice    Decimal @db.Decimal(12, 2)
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product    Product    @relation(fields: [productId], references: [id])
+
+  @@map("so_line_items")
+}
+
+model Invoice {
+  id            String            @id @default(cuid())
+  salesOrderId  String
+  invoiceNumber String            @unique
+  amount        Decimal           @db.Decimal(14, 2)
+  paidStatus    InvoicePaidStatus @default(UNPAID)
+  createdAt     DateTime          @default(now())
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
+
+  @@map("invoices")
+}
+
+model Carrier {
+  id            String  @id @default(cuid())
+  name          String
+  contactPerson String?
+  phone         String?
+  email         String? @unique
+
+  shipments Shipment[]
+
+  @@map("carriers")
+}
+
+model Shipment {
+  id               String         @id @default(cuid())
+  salesOrderId     String
+  carrierId        String
+  trackingNumber   String?        @unique
+  status           ShipmentStatus @default(PENDING)
+  estimatedDelivery DateTime?
+  createdAt        DateTime       @default(now())
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
+  carrier    Carrier    @relation(fields: [carrierId], references: [id])
+
+  @@map("shipments")
+}
+
+model StockMovement {
+  id        String            @id @default(cuid())
+  productId String
+  type      StockMovementType
+  quantity  Int
+  reference String?
+  createdAt DateTime          @default(now())
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("stock_movements")
+}
+
+model Watcher {
+  id         String  @id @default(cuid())
+  userId     String
+  entityType String
+  eventType  String
+  emailTo    String
+  threshold  Decimal? @db.Decimal(12, 2)
+  isActive   Boolean @default(true)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("watchers")
+}
+
+model EmailLog {
+  id      String   @id @default(cuid())
+  to      String
+  subject String
+  status  String
+  sentAt  DateTime @default(now())
+
+  @@map("email_logs")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
