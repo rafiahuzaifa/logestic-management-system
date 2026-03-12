@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
 import { Warehouse, Package, BarChart3, DollarSign, Edit, MapPin } from 'lucide-react'
+import { WarehouseManager } from '@/components/warehouses/WarehouseManager'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,10 +32,13 @@ export default async function WarehousesPage() {
   const session = await getServerSession(authOptions)
   const canEdit = ['ADMIN', 'WAREHOUSE_MANAGER'].includes(session?.user?.role ?? '')
 
-  const rawProducts = await prisma.product.findMany({
-    include: { category: { select: { name: true } } },
-    orderBy: [{ warehouseLocation: 'asc' }, { name: 'asc' }],
-  })
+  const [rawProducts, warehouseList] = await Promise.all([
+    prisma.product.findMany({
+      include: { category: { select: { name: true } } },
+      orderBy: [{ warehouseLocation: 'asc' }, { name: 'asc' }],
+    }),
+    prisma.warehouse.findMany({ orderBy: { name: 'asc' } }),
+  ])
 
   // Map to a flat shape
   const products = rawProducts.map((p) => ({
@@ -92,6 +96,9 @@ export default async function WarehousesPage() {
           Inventory organised by warehouse location
         </p>
       </div>
+
+      {/* Warehouse Manager (Add / Edit / Delete) */}
+      <WarehouseManager warehouses={warehouseList.map((w) => ({ id: w.id, name: w.name, description: w.description }))} />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

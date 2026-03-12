@@ -146,7 +146,7 @@ export default async function InventoryPage({ searchParams }: PageProps) {
                       <td className="px-4 py-3">
                         {canEdit && (
                           <div className="flex items-center gap-1">
-                            <StockAdjustModal productId={p.id} productName={p.name} currentStock={p.currentStock} onSuccess={() => {}}>
+                            <StockAdjustModal productId={p.id} productName={p.name} currentStock={p.currentStock}>
                               <Button size="sm" variant="ghost" className="h-7 px-2 text-xs">Adjust</Button>
                             </StockAdjustModal>
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" asChild>

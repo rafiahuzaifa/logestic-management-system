@@ -213,6 +213,15 @@ model Invoice {
   @@map("invoices")
 }
 
+model Warehouse {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@map("warehouses")
+}
+
 model Carrier {
   id            String  @id @default(cuid())
   name          String

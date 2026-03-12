@@ -58,7 +58,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           {!isOut && isLow && <Badge variant="warning">Low Stock</Badge>}
           {!isOut && !isLow && <Badge variant="success">In Stock</Badge>}
           {canEdit && (
-            <StockAdjustModal productId={product.id} productName={product.name} currentStock={product.currentStock} onSuccess={() => {}}>
+            <StockAdjustModal productId={product.id} productName={product.name} currentStock={product.currentStock}>
               <Button variant="outline" className="gap-1.5">
                 <SlidersHorizontal className="h-4 w-4" /> Adjust Stock
               </Button>

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, FileText, TrendingUp, TrendingDown, DollarSign } from 'lucide-react'
+import { InvoiceActions } from '@/components/invoices/InvoiceActions'
 
 export const dynamic = 'force-dynamic'
 
@@ -131,6 +132,7 @@ export default async function InvoicesPage() {
                   <th className="px-4 py-3 text-right font-medium">Profit</th>
                   <th className="px-4 py-3 text-center font-medium">Status</th>
                   <th className="px-4 py-3 text-left font-medium">Date</th>
+                  <th className="px-4 py-3 text-left font-medium"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -169,6 +171,17 @@ export default async function InvoicesPage() {
                         </td>
                         <td className="px-4 py-3 text-gray-500 text-xs">
                           {new Date(inv.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3">
+                          <InvoiceActions inv={{
+                            id: inv.id,
+                            invoiceNumber: inv.invoiceNumber,
+                            companyName: inv.companyName,
+                            billingPeriod: inv.billingPeriod,
+                            amount: inv.amount.toString(),
+                            vendorCost: inv.vendorCost?.toString() ?? null,
+                            paidStatus: inv.paidStatus,
+                          }} />
                         </td>
                       </tr>
                     )
