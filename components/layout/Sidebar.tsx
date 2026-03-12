@@ -19,6 +19,7 @@ import {
   LogOut,
   BoxIcon,
   ChevronRight,
+  Receipt,
 } from 'lucide-react'
 
 const navGroups = [
@@ -41,6 +42,12 @@ const navGroups = [
       { href: '/inventory',   label: 'Inventory',   icon: Package },
       { href: '/warehouses',  label: 'Warehouses',  icon: Warehouse },
       { href: '/shipments',   label: 'Shipments',   icon: Truck },
+    ],
+  },
+  {
+    label: 'Finance',
+    items: [
+      { href: '/invoices', label: 'Invoices', icon: Receipt },
     ],
   },
   {

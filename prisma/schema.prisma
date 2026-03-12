@@ -201,7 +201,10 @@ model Invoice {
   id            String            @id @default(cuid())
   salesOrderId  String
   invoiceNumber String            @unique
+  companyName   String?
+  billingPeriod String?
   amount        Decimal           @db.Decimal(14, 2)
+  vendorCost    Decimal?          @db.Decimal(14, 2)
   paidStatus    InvoicePaidStatus @default(UNPAID)
   createdAt     DateTime          @default(now())
 
