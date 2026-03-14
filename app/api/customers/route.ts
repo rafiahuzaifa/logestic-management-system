@@ -24,13 +24,18 @@ export async function POST(req: NextRequest) {
     const b = await req.json()
     const customer = await prisma.customer.create({
       data: {
-        name: b.name,
-        email: b.email,
-        phone: b.phone || null,
-        address: b.address || null,
-        companyType: b.companyType || null,
-        taxId: b.taxId || null,
-        creditLimit: b.creditLimit ? Number(b.creditLimit) : null,
+        name:          b.name,
+        email:         b.email,
+        phone:         b.phone         || null,
+        address:       b.address       || null,
+        city:          b.city          || null,
+        country:       b.country       || null,
+        website:       b.website       || null,
+        contactPerson: b.contactPerson || null,
+        companyType:   b.companyType   || null,
+        taxId:         b.taxId         || null,
+        creditLimit:   b.creditLimit   ? Number(b.creditLimit) : null,
+        notes:         b.notes         || null,
       },
     })
     return NextResponse.json(customer, { status: 201 })

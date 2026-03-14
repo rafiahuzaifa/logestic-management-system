@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { createNotifications } from '@/lib/notifications'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -47,8 +48,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ...rest,
         estimatedDelivery: estimatedDelivery ? new Date(estimatedDelivery) : undefined,
       },
-      include: { carrier: true },
+      include: { carrier: true, salesOrder: { include: { customer: true } } },
     })
+
+    if (rest.status === 'DELAYED') {
+      await createNotifications({
+        title: 'Shipment Delayed',
+        message: `Shipment #${shipment.id.slice(-8).toUpperCase()} for ${(shipment as any).salesOrder?.customer?.name ?? 'a customer'} has been marked as delayed.`,
+        type: 'SHIPMENT_DELAYED',
+        entityType: 'shipment',
+        entityId: id,
+        roles: ['ADMIN', 'LOGISTICS_OFFICER', 'SALES_MANAGER'],
+      })
+    } else if (rest.status === 'DELIVERED') {
+      await createNotifications({
+        title: 'Shipment Delivered',
+        message: `Shipment #${shipment.id.slice(-8).toUpperCase()} for ${(shipment as any).salesOrder?.customer?.name ?? 'a customer'} has been delivered.`,
+        type: 'SHIPMENT_DELIVERED',
+        entityType: 'shipment',
+        entityId: id,
+        roles: ['ADMIN', 'SALES_MANAGER'],
+      })
+    }
+
     return NextResponse.json(shipment)
   } catch (err) {
     console.error(err)

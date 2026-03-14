@@ -11,13 +11,18 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const schema = z.object({
-  name:        z.string().min(1, 'Name is required'),
-  email:       z.string().email('Valid email required'),
-  phone:       z.string().optional(),
-  address:     z.string().optional(),
-  companyType: z.string().optional(),
-  taxId:       z.string().optional(),
-  creditLimit: z.number().min(0).optional(),
+  name:          z.string().min(1, 'Name is required'),
+  email:         z.string().email('Valid email required'),
+  phone:         z.string().optional(),
+  address:       z.string().optional(),
+  city:          z.string().optional(),
+  country:       z.string().optional(),
+  website:       z.string().optional(),
+  contactPerson: z.string().optional(),
+  companyType:   z.string().optional(),
+  taxId:         z.string().optional(),
+  creditLimit:   z.number().min(0).optional(),
+  notes:         z.string().optional(),
 })
 type FormData = z.infer<typeof schema>
 
@@ -50,12 +55,28 @@ export function CustomerForm() {
       {error && <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Contact Information</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Company Information</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Full Name <span className="text-red-500">*</span></Label>
+            <Label>Company / Customer Name <span className="text-red-500">*</span></Label>
             <Input placeholder="e.g. Acme Corporation" {...register('name')} />
             {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label>Company Type</Label>
+            <select className={sel} {...register('companyType')}>
+              <option value="">Select type…</option>
+              <option value="Corporate">Corporate</option>
+              <option value="SME">SME</option>
+              <option value="Retail">Retail</option>
+              <option value="Government">Government</option>
+              <option value="Telecom">Telecom</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Contact Person</Label>
+            <Input placeholder="Primary contact name" {...register('contactPerson')} />
           </div>
           <div className="space-y-1.5">
             <Label>Email <span className="text-red-500">*</span></Label>
@@ -67,19 +88,26 @@ export function CustomerForm() {
             <Input placeholder="+92-300-1234567" {...register('phone')} />
           </div>
           <div className="space-y-1.5">
-            <Label>Company Type</Label>
-            <select className={sel} {...register('companyType')}>
-              <option value="">Select type…</option>
-              <option value="Corporate">Corporate</option>
-              <option value="SME">SME</option>
-              <option value="Retail">Retail</option>
-              <option value="Government">Government</option>
-              <option value="Other">Other</option>
-            </select>
+            <Label>Website</Label>
+            <Input placeholder="https://company.com" {...register('website')} />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Address</CardTitle></CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2 space-y-1.5">
-            <Label>Address</Label>
-            <Input placeholder="Street, City, Country" {...register('address')} />
+            <Label>Street Address</Label>
+            <Input placeholder="Street address" {...register('address')} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>City</Label>
+            <Input placeholder="Karachi, Lahore…" {...register('city')} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Country</Label>
+            <Input placeholder="Pakistan" {...register('country')} />
           </div>
         </CardContent>
       </Card>
@@ -95,6 +123,14 @@ export function CustomerForm() {
             <Label>Credit Limit ($)</Label>
             <Input type="number" step="0.01" min="0" placeholder="0.00"
               {...register('creditLimit', { valueAsNumber: true })} />
+          </div>
+          <div className="sm:col-span-2 space-y-1.5">
+            <Label>Notes</Label>
+            <textarea
+              className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-[#387dff]"
+              placeholder="Internal notes about this customer…"
+              {...register('notes')}
+            />
           </div>
         </CardContent>
       </Card>

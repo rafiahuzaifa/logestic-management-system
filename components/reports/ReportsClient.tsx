@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, Loader2, TrendingDown, Package, Truck, ShoppingCart, Users } from 'lucide-react'
+import { RefreshCw, Loader2, TrendingDown, Package, Truck, ShoppingCart, Users, Download } from 'lucide-react'
 
 interface OrderStat  { status: string; _count: number; _sum: { totalAmount: string | null } }
 interface ShipStat   { status: string; _count: number }
@@ -56,10 +56,25 @@ export function ReportsClient({ initialData }: { initialData: ReportData }) {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Reports & Analytics</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Live overview of all logistics operations</p>
         </div>
-        <Button variant="outline" size="sm" onClick={refresh} disabled={loading} className="gap-1.5">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            {(['inventory','sales-orders','invoices','customers','suppliers','shipments'] as const).map((type) => (
+              <a
+                key={type}
+                href={`/api/reports/export?type=${type}`}
+                download
+                className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
+              >
+                <Download className="h-3 w-3" />
+                {type.replace('-', ' ')}
+              </a>
+            ))}
+          </div>
+          <Button variant="outline" size="sm" onClick={refresh} disabled={loading} className="gap-1.5">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* KPI row */}

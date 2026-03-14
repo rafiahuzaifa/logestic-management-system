@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { createNotifications } from '@/lib/notifications'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -45,6 +46,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     await prisma.auditLog.create({
       data: { userId: session.user.id, action: 'STOCK_ADJUST', entity: 'Product', entityId: id },
     })
+
+    // Fire low-stock notification if stock dropped below reorder level
+    if (newStock <= updated.reorderLevel && (type === 'OUT' || type === 'ADJUSTMENT')) {
+      await createNotifications({
+        title: 'Low Stock Alert',
+        message: `${updated.name} (${updated.sku}) is low: ${newStock} units remaining (reorder at ${updated.reorderLevel}).`,
+        type: 'LOW_STOCK',
+        entityType: 'product',
+        entityId: id,
+        roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
+      })
+    }
 
     return NextResponse.json({ movement, product: updated })
   } catch (err) {

@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useTheme } from 'next-themes'
-import { Bell, Sun, Moon, Search } from 'lucide-react'
+import { Sun, Moon, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
+import { NotificationBell } from './NotificationBell'
 
 export function Header() {
   const { data: session } = useSession()
@@ -25,7 +26,7 @@ export function Header() {
     : 'U'
 
   return (
-    <header className="fixed left-64 right-0 top-0 z-40 flex h-16 items-center border-b border-gray-200 bg-white/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:border-gray-800 dark:bg-gray-950/95 dark:supports-[backdrop-filter]:bg-gray-950/80">
+    <header className="fixed left-64 right-0 top-0 z-40 flex h-16 items-center border-b border-gray-200 bg-white/95 px-6 backdrop-blur supports-backdrop-filter:bg-white/80 dark:border-gray-800 dark:bg-gray-950/95 dark:supports-backdrop-filter:bg-gray-950/80">
       {/* Search */}
       <div className="relative flex-1 max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -48,16 +49,13 @@ export function Header() {
           <span className="sr-only">Toggle theme</span>
         </Button>
 
-        {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100">
-          <Bell className="h-4 w-4" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
-        </Button>
+        {/* Live Notifications Bell */}
+        <NotificationBell />
 
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <button className="flex h-8 w-8 items-center justify-center rounded-full bg-[#387dff] text-xs font-bold text-white hover:bg-[#2563eb] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#387dff]">
               {initials}
             </button>
           </DropdownMenuTrigger>
@@ -67,9 +65,6 @@ export function Header() {
               <p className="text-xs font-normal text-gray-500 dark:text-gray-400">{session?.user?.email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/settings/profile">Profile</Link>
-            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/settings">Settings</Link>
             </DropdownMenuItem>

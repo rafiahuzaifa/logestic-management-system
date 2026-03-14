@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { createNotifications } from '@/lib/notifications'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,21 +27,27 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const b = await req.json()
-    // b.lineItems: [{ productId, quantity, unitPrice }]
     const totalAmount = (b.lineItems as { quantity: number; unitPrice: number }[])
       .reduce((s, li) => s + li.quantity * li.unitPrice, 0)
 
     const order = await prisma.salesOrder.create({
       data: {
-        customerId: b.customerId,
-        createdById: session.user.id,
-        status: b.status ?? 'DRAFT',
+        customerId:      b.customerId,
+        createdById:     session.user.id,
+        status:          b.status ?? 'DRAFT',
+        priority:        b.priority ?? 'NORMAL',
+        currency:        b.currency ?? 'USD',
         totalAmount,
+        discount:        b.discount ?? null,
+        deliveryAddress: b.deliveryAddress ?? null,
+        notes:           b.notes ?? null,
+        dueDate:         b.dueDate ? new Date(b.dueDate) : null,
         lineItems: {
-          create: (b.lineItems as { productId: string; quantity: number; unitPrice: number }[]).map((li) => ({
+          create: (b.lineItems as { productId: string; quantity: number; unitPrice: number; discount?: number }[]).map((li) => ({
             productId: li.productId,
-            quantity: li.quantity,
+            quantity:  li.quantity,
             unitPrice: li.unitPrice,
+            discount:  li.discount ?? 0,
           })),
         },
       },
@@ -49,6 +56,16 @@ export async function POST(req: NextRequest) {
         lineItems: { include: { product: true } },
       },
     })
+
+    await createNotifications({
+      title: 'New Sales Order',
+      message: `Order #${order.id.slice(-8).toUpperCase()} created for ${order.customer.name} — $${totalAmount.toFixed(2)}`,
+      type: 'NEW_ORDER',
+      entityType: 'sales_order',
+      entityId: order.id,
+      roles: ['ADMIN', 'SALES_MANAGER'],
+    })
+
     return NextResponse.json(order, { status: 201 })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
