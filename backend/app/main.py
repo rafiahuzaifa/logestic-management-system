@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.routes import auth as auth_router
+from app.api.routes import email_poller as poller_router
 from app.core.config import settings
 
 
@@ -33,7 +34,8 @@ app.add_middleware(
 )
 
 # ── Routes ────────────────────────────────────────────────────────────────────
-app.include_router(auth_router.router, prefix="/api/v1")
+app.include_router(auth_router.router,   prefix="/api/v1")
+app.include_router(poller_router.router, prefix="/api/v1")
 
 # Future modules — uncomment as they are built:
 # from app.api.routes import inventory, suppliers, purchase_orders, shipments
