@@ -35,10 +35,12 @@ class Settings(BaseSettings):
     POLL_SECRET: str = "change-me-poll-secret"
 
     # ── AI Parsing ────────────────────────────────────────────────────────────
-    AI_PROVIDER:    str = "anthropic"        # "anthropic" or "openai"
-    ANTHROPIC_KEY:  str = ""                 # Get from console.anthropic.com
-    OPENAI_KEY:     str = ""                 # Get from platform.openai.com
-    AI_MODEL:       str = "claude-sonnet-4-6"  # or "gpt-4o"
+    # FREE option: set AI_PROVIDER=groq  → sign up at console.groq.com (100% free)
+    AI_PROVIDER:    str = "groq"             # "groq" (FREE) | "anthropic" | "openai"
+    GROQ_KEY:       str = ""                 # FREE — https://console.groq.com
+    ANTHROPIC_KEY:  str = ""                 # Paid — console.anthropic.com
+    OPENAI_KEY:     str = ""                 # Paid — platform.openai.com
+    AI_MODEL:       str = "llama-3.3-70b-versatile"  # Groq free model (fastest)
     AI_MAX_TOKENS:  int = 1024
 
     # ── Notifications ─────────────────────────────────────────────────────────

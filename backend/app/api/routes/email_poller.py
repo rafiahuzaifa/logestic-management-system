@@ -111,11 +111,28 @@ async def _parse_with_ai(subject: str, from_addr: str, body: str) -> dict[str, A
     )
 
     try:
-        if settings.AI_PROVIDER == "anthropic" and settings.ANTHROPIC_KEY:
+        if settings.AI_PROVIDER == "groq" and settings.GROQ_KEY:
+            # ── Groq (FREE) — llama-3.3-70b or mixtral ──────────────────────
+            # Sign up free: https://console.groq.com
+            from openai import OpenAI as GroqClient
+            client = GroqClient(
+                api_key=settings.GROQ_KEY,
+                base_url="https://api.groq.com/openai/v1",
+            )
+            resp = client.chat.completions.create(
+                model=settings.AI_MODEL or "llama-3.3-70b-versatile",
+                max_tokens=settings.AI_MAX_TOKENS,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"},
+                temperature=0.1,
+            )
+            raw = resp.choices[0].message.content or "{}"
+
+        elif settings.AI_PROVIDER == "anthropic" and settings.ANTHROPIC_KEY:
             import anthropic
             client = anthropic.Anthropic(api_key=settings.ANTHROPIC_KEY)
             resp = client.messages.create(
-                model=settings.AI_MODEL,
+                model=settings.AI_MODEL or "claude-sonnet-4-6",
                 max_tokens=settings.AI_MAX_TOKENS,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -133,7 +150,7 @@ async def _parse_with_ai(subject: str, from_addr: str, body: str) -> dict[str, A
             raw = resp.choices[0].message.content or "{}"
 
         else:
-            # Fallback: simple heuristic parsing (no AI key configured)
+            # Fallback: keyword-based heuristic (no AI key needed — 100% free)
             logger.warning("No AI key configured — using heuristic fallback")
             return _heuristic_parse(subject, from_addr, body)
 

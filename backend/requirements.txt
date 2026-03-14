@@ -28,8 +28,10 @@ beautifulsoup4==4.12.3      # HTML email body stripping
 lxml==5.3.0                 # BS4 HTML parser
 
 # ── AI Parsing ────────────────────────────────────────────────────────────────
-anthropic==0.40.0           # Claude API  — pip install anthropic
-openai==1.54.0              # OpenAI fallback — pip install openai
+openai==1.54.0              # Used for BOTH Groq (free) AND OpenAI — same SDK
+# Groq is FREE — uses openai SDK with base_url="https://api.groq.com/openai/v1"
+# Sign up: https://console.groq.com (no credit card needed)
+anthropic==0.40.0           # Optional paid: Claude API
 
 # ── Notifications ─────────────────────────────────────────────────────────────
 twilio==9.3.5               # WhatsApp via Twilio (optional)
