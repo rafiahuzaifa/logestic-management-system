@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createNotifications } from '@/lib/notifications'
+import { triggerWatchers } from '@/lib/watchers'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,14 +58,9 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    await createNotifications({
-      title: 'New Sales Order',
-      message: `Order #${order.id.slice(-8).toUpperCase()} created for ${order.customer.name} — $${totalAmount.toFixed(2)}`,
-      type: 'NEW_ORDER',
-      entityType: 'sales_order',
-      entityId: order.id,
-      roles: ['ADMIN', 'SALES_MANAGER'],
-    })
+    const orderMsg = `Order #${order.id.slice(-8).toUpperCase()} created for ${order.customer.name} — $${totalAmount.toFixed(2)}`
+    await createNotifications({ title: 'New Sales Order', message: orderMsg, type: 'NEW_ORDER', entityType: 'sales_order', entityId: order.id, roles: ['ADMIN', 'SALES_MANAGER'] })
+    await triggerWatchers({ entityType: 'sales_order', eventType: 'created', entityId: order.id, title: 'New Sales Order', message: orderMsg, details: { 'Order': `#${order.id.slice(-8).toUpperCase()}`, 'Customer': order.customer.name, 'Total': `$${totalAmount.toFixed(2)}`, 'Items': String(order.lineItems.length) } })
 
     return NextResponse.json(order, { status: 201 })
   } catch (err) {

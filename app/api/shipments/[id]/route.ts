@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createNotifications } from '@/lib/notifications'
+import { triggerWatchers } from '@/lib/watchers'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -51,24 +52,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       include: { carrier: true, salesOrder: { include: { customer: true } } },
     })
 
+    const customer = (shipment as any).salesOrder?.customer?.name ?? 'a customer'
+    const carrier  = shipment.carrier?.name ?? '—'
+    const ref      = `#${shipment.id.slice(-8).toUpperCase()}`
+
     if (rest.status === 'DELAYED') {
-      await createNotifications({
-        title: 'Shipment Delayed',
-        message: `Shipment #${shipment.id.slice(-8).toUpperCase()} for ${(shipment as any).salesOrder?.customer?.name ?? 'a customer'} has been marked as delayed.`,
-        type: 'SHIPMENT_DELAYED',
-        entityType: 'shipment',
-        entityId: id,
-        roles: ['ADMIN', 'LOGISTICS_OFFICER', 'SALES_MANAGER'],
-      })
+      const msg = `Shipment ${ref} for ${customer} via ${carrier} has been marked as delayed.`
+      await createNotifications({ title: 'Shipment Delayed', message: msg, type: 'SHIPMENT_DELAYED', entityType: 'shipment', entityId: id, roles: ['ADMIN', 'LOGISTICS_OFFICER', 'SALES_MANAGER'] })
+      await triggerWatchers({ entityType: 'shipment', eventType: 'delayed', entityId: id, title: 'Shipment Delayed', message: msg, details: { 'Shipment': ref, 'Customer': customer, 'Carrier': carrier, 'Tracking': shipment.trackingNumber ?? '—' } })
     } else if (rest.status === 'DELIVERED') {
-      await createNotifications({
-        title: 'Shipment Delivered',
-        message: `Shipment #${shipment.id.slice(-8).toUpperCase()} for ${(shipment as any).salesOrder?.customer?.name ?? 'a customer'} has been delivered.`,
-        type: 'SHIPMENT_DELIVERED',
-        entityType: 'shipment',
-        entityId: id,
-        roles: ['ADMIN', 'SALES_MANAGER'],
-      })
+      const msg = `Shipment ${ref} for ${customer} has been delivered.`
+      await createNotifications({ title: 'Shipment Delivered', message: msg, type: 'SHIPMENT_DELIVERED', entityType: 'shipment', entityId: id, roles: ['ADMIN', 'SALES_MANAGER'] })
+      await triggerWatchers({ entityType: 'shipment', eventType: 'status_change', entityId: id, title: 'Shipment Delivered', message: msg, details: { 'Shipment': ref, 'Customer': customer, 'Carrier': carrier } })
+    } else if (rest.status === 'IN_TRANSIT') {
+      await triggerWatchers({ entityType: 'shipment', eventType: 'status_change', entityId: id, title: 'Shipment In Transit', message: `Shipment ${ref} for ${customer} is now in transit.`, details: { 'Shipment': ref, 'Customer': customer, 'Carrier': carrier, 'Tracking': shipment.trackingNumber ?? '—' } })
     }
 
     return NextResponse.json(shipment)

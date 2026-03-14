@@ -8,7 +8,7 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, Loader2, X, Trash2 } from 'lucide-react'
+import { Plus, Loader2, X, Trash2, Bell, BellOff } from 'lucide-react'
 import * as Dialog from '@radix-ui/react-dialog'
 
 const schema = z.object({
@@ -20,127 +20,119 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 interface Watcher {
-  id:         string
-  entityType: string
-  eventType:  string
-  emailTo:    string
-  threshold:  number | null
-  isActive:   boolean
+  id: string; entityType: string; eventType: string
+  emailTo: string; threshold: number | null; isActive: boolean
 }
 
-const ENTITY_TYPES = ['product', 'purchase_order', 'shipment', 'sales_order']
-const EVENT_TYPES  = ['low_stock', 'status_change', 'delayed', 'overdue', 'created']
+const ENTITIES = [
+  { value: 'product',        label: '📦 Product',        events: [{ value: 'low_stock', label: 'Low Stock', hasThreshold: true }, { value: 'created', label: 'New Product Added' }] },
+  { value: 'shipment',       label: '🚚 Shipment',       events: [{ value: 'delayed', label: 'Shipment Delayed' }, { value: 'status_change', label: 'Status Changed' }, { value: 'created', label: 'New Shipment Created' }] },
+  { value: 'sales_order',    label: '🛒 Sales Order',    events: [{ value: 'created', label: 'New Order Created' }, { value: 'status_change', label: 'Status Changed' }] },
+  { value: 'purchase_order', label: '📋 Purchase Order', events: [{ value: 'created', label: 'New PO Created' }, { value: 'status_change', label: 'Status Changed' }] },
+  { value: 'invoice',        label: '🧾 Invoice',        events: [{ value: 'created', label: 'Invoice Created' }, { value: 'overdue', label: 'Invoice Overdue' }, { value: 'paid', label: 'Invoice Paid' }] },
+]
+
+const sel = 'flex h-9 w-full rounded-lg border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#387dff] dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100'
 
 export function WatcherManager({ initialWatchers }: { initialWatchers: Watcher[] }) {
   const router = useRouter()
-  const [open, setOpen]               = useState(false)
-  const [watchers, setWatchers]       = useState<Watcher[]>(initialWatchers)
-  const [serverError, setServerError] = useState('')
-  const [deleting, setDeleting]       = useState<string | null>(null)
+  const [open, setOpen]         = useState(false)
+  const [watchers, setWatchers] = useState<Watcher[]>(initialWatchers)
+  const [serverError, setErr]   = useState('')
+  const [deleting, setDeleting] = useState<string | null>(null)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema) as any,
-    defaultValues: { threshold: undefined },
   })
 
+  const entityVal         = watch('entityType')
+  const entityObj         = ENTITIES.find(e => e.value === entityVal)
+  const eventVal          = watch('eventType')
+  const eventObj          = entityObj?.events.find(ev => ev.value === eventVal)
+
+  const onEntityChange = (v: string) => { setValue('entityType', v); setValue('eventType', '') }
+
   const onSubmit = async (data: FormData) => {
-    setServerError('')
-    try {
-      const res = await fetch('/api/watchers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const body = await res.json()
-        setServerError(body.error ?? 'Failed to create watcher')
-        return
-      }
-      const newWatcher = await res.json()
-      setWatchers(prev => [newWatcher, ...prev])
-      setOpen(false)
-      reset()
-      router.refresh()
-    } catch {
-      setServerError('Something went wrong')
-    }
+    setErr('')
+    const res = await fetch('/api/watchers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+    if (!res.ok) { setErr((await res.json()).error ?? 'Failed'); return }
+    const newW = await res.json()
+    setWatchers(p => [newW, ...p])
+    setOpen(false); reset(); router.refresh()
   }
 
-  const deleteWatcher = async (id: string) => {
+  const del = async (id: string) => {
     setDeleting(id)
-    try {
-      await fetch(`/api/watchers/${id}`, { method: 'DELETE' })
-      setWatchers(prev => prev.filter(w => w.id !== id))
-      router.refresh()
-    } finally {
-      setDeleting(null)
-    }
+    await fetch(`/api/watchers/${id}`, { method: 'DELETE' })
+    setWatchers(p => p.filter(w => w.id !== id))
+    setDeleting(null)
   }
 
-  const toggleActive = async (id: string, isActive: boolean) => {
-    const res = await fetch(`/api/watchers/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isActive: !isActive }),
-    })
-    if (res.ok) {
-      setWatchers(prev => prev.map(w => w.id === id ? { ...w, isActive: !isActive } : w))
-    }
+  const toggle = async (id: string, cur: boolean) => {
+    const res = await fetch(`/api/watchers/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive: !cur }) })
+    if (res.ok) setWatchers(p => p.map(w => w.id === id ? { ...w, isActive: !cur } : w))
   }
 
-  const selectCls = 'flex h-9 w-full rounded-lg border border-gray-300 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100'
+  const eLabel = (v: string) => ENTITIES.find(e => e.value === v)?.label ?? v
+  const evLabel = (en: string, ev: string) => ENTITIES.find(e => e.value === en)?.events.find(e => e.value === ev)?.label ?? ev
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">{watchers.length} watcher{watchers.length !== 1 ? 's' : ''} configured</p>
+        <p className="text-sm text-gray-500">{watchers.length} watcher{watchers.length !== 1 ? 's' : ''}</p>
         <Dialog.Root open={open} onOpenChange={setOpen}>
           <Dialog.Trigger asChild>
-            <Button size="sm" className="gap-1.5"><Plus className="h-3.5 w-3.5" />Add Watcher</Button>
+            <Button size="sm" className="gap-1.5 bg-[#387dff] hover:bg-[#2563eb]"><Plus className="h-3.5 w-3.5" />Add Watcher</Button>
           </Dialog.Trigger>
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-            <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-950">
+            <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-950">
               <div className="flex items-center justify-between mb-5">
-                <Dialog.Title className="text-base font-semibold">New Watcher</Dialog.Title>
-                <Dialog.Close className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
-                  <X className="h-4 w-4" />
-                </Dialog.Close>
+                <div>
+                  <Dialog.Title className="text-base font-semibold">New Email Watcher</Dialog.Title>
+                  <p className="text-xs text-gray-500 mt-0.5">Get email when this event happens</p>
+                </div>
+                <Dialog.Close className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><X className="h-4 w-4" /></Dialog.Close>
               </div>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                {serverError && <p className="text-sm text-red-600">{serverError}</p>}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="entityType">Entity</Label>
-                    <select id="entityType" {...register('entityType')} className={selectCls}>
-                      <option value="">Select…</option>
-                      {ENTITY_TYPES.map(e => <option key={e} value={e}>{e.replace('_', ' ')}</option>)}
-                    </select>
-                    {errors.entityType && <p className="text-xs text-red-600">{errors.entityType.message}</p>}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="eventType">Event</Label>
-                    <select id="eventType" {...register('eventType')} className={selectCls}>
-                      <option value="">Select…</option>
-                      {EVENT_TYPES.map(e => <option key={e} value={e}>{e.replace('_', ' ')}</option>)}
-                    </select>
-                    {errors.eventType && <p className="text-xs text-red-600">{errors.eventType.message}</p>}
-                  </div>
-                </div>
+                {serverError && <p className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">{serverError}</p>}
+
                 <div className="space-y-1.5">
-                  <Label htmlFor="emailTo">Notify Email</Label>
-                  <Input id="emailTo" type="email" placeholder="alerts@company.com" {...register('emailTo')} />
+                  <Label>Watch Entity</Label>
+                  <select className={sel} value={entityVal || ''} onChange={e => onEntityChange(e.target.value)}>
+                    <option value="">Select what to watch…</option>
+                    {ENTITIES.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
+                  </select>
+                  <input type="hidden" {...register('entityType')} />
+                  {errors.entityType && <p className="text-xs text-red-600">{errors.entityType.message}</p>}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>When this happens</Label>
+                  <select className={sel} {...register('eventType')} disabled={!entityVal}>
+                    <option value="">Select event…</option>
+                    {entityObj?.events.map(ev => <option key={ev.value} value={ev.value}>{ev.label}</option>)}
+                  </select>
+                  {errors.eventType && <p className="text-xs text-red-600">{errors.eventType.message}</p>}
+                </div>
+
+                {(eventObj as any)?.hasThreshold && (
+                  <div className="space-y-1.5">
+                    <Label>Stock Threshold <span className="text-gray-400 font-normal text-xs">(optional)</span></Label>
+                    <Input type="number" step="1" min="0" placeholder="e.g. 10 — alert only if stock ≤ this" {...register('threshold', { valueAsNumber: true })} />
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <Label>Send alert to email</Label>
+                  <Input type="email" placeholder="manager@sharptel.pk" {...register('emailTo')} />
                   {errors.emailTo && <p className="text-xs text-red-600">{errors.emailTo.message}</p>}
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="threshold">Threshold (optional)</Label>
-                  <Input id="threshold" type="number" step="0.01" placeholder="e.g. 10 for stock below 10" {...register('threshold', { valueAsNumber: true })} />
-                </div>
+
                 <div className="flex gap-2 pt-1">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => { setOpen(false); reset() }}>Cancel</Button>
-                  <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                    {isSubmitting ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />Creating…</> : 'Create Watcher'}
+                  <Button type="submit" className="flex-1 bg-[#387dff] hover:bg-[#2563eb]" disabled={isSubmitting}>
+                    {isSubmitting ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" />Creating…</> : 'Create Watcher'}
                   </Button>
                 </div>
               </form>
@@ -150,36 +142,30 @@ export function WatcherManager({ initialWatchers }: { initialWatchers: Watcher[]
       </div>
 
       {watchers.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 p-8 text-center text-gray-400">
-          <p className="text-sm">No watchers configured yet. Add one to receive email alerts.</p>
+        <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 p-10 text-center">
+          <Bell className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">No watchers yet</p>
+          <p className="text-xs text-gray-400 mt-1">Add a watcher to get email alerts for any LSM event</p>
         </div>
       ) : (
-        <div className="divide-y divide-gray-100 dark:divide-gray-800 rounded-xl border border-gray-100 dark:border-gray-800">
+        <div className="divide-y divide-gray-100 dark:divide-gray-800 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
           {watchers.map(w => (
-            <div key={w.id} className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className={`h-2 w-2 rounded-full ${w.isActive ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {w.entityType.replace('_', ' ')} → {w.eventType.replace('_', ' ')}
-                    {w.threshold != null && <span className="text-gray-500"> (threshold: {w.threshold})</span>}
-                  </p>
-                  <p className="text-xs text-gray-500">{w.emailTo}</p>
-                </div>
+            <div key={w.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+              <div className={`h-2 w-2 rounded-full shrink-0 ${w.isActive ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {eLabel(w.entityType)} → <span className="text-[#387dff]">{evLabel(w.entityType, w.eventType)}</span>
+                  {w.threshold != null && <span className="text-gray-400 font-normal text-xs"> (≤{w.threshold})</span>}
+                </p>
+                <p className="text-xs text-gray-500 truncate">✉ {w.emailTo}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => toggleActive(w.id, w.isActive)}
-                  className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${w.isActive ? 'border-emerald-300 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-400' : 'border-gray-300 text-gray-500 bg-gray-50 dark:bg-gray-800 dark:border-gray-700'}`}
-                >
-                  {w.isActive ? 'Active' : 'Paused'}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button onClick={() => toggle(w.id, w.isActive)}
+                  className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors ${w.isActive ? 'border-emerald-300 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-400' : 'border-gray-300 text-gray-500 bg-gray-50 dark:bg-gray-800 dark:border-gray-700'}`}>
+                  {w.isActive ? <><Bell className="h-2.5 w-2.5" /> Active</> : <><BellOff className="h-2.5 w-2.5" /> Paused</>}
                 </button>
-                <button
-                  onClick={() => deleteWatcher(w.id)}
-                  disabled={deleting === w.id}
-                  className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                >
-                  {deleting === w.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                <button onClick={() => del(w.id)} disabled={deleting === w.id} className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors">
+                  {deleting === w.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                 </button>
               </div>
             </div>

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createNotifications } from '@/lib/notifications'
+import { triggerWatchers } from '@/lib/watchers'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -47,15 +48,31 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       data: { userId: session.user.id, action: 'STOCK_ADJUST', entity: 'Product', entityId: id },
     })
 
-    // Fire low-stock notification if stock dropped below reorder level
+    // Fire low-stock alerts when stock drops at or below reorder level
     if (newStock <= updated.reorderLevel && (type === 'OUT' || type === 'ADJUSTMENT')) {
+      const alertMsg = `${updated.name} (${updated.sku}) is low: ${newStock} units remaining (reorder level: ${updated.reorderLevel}).`
       await createNotifications({
         title: 'Low Stock Alert',
-        message: `${updated.name} (${updated.sku}) is low: ${newStock} units remaining (reorder at ${updated.reorderLevel}).`,
+        message: alertMsg,
         type: 'LOW_STOCK',
         entityType: 'product',
         entityId: id,
         roles: ['ADMIN', 'WAREHOUSE_MANAGER'],
+      })
+      await triggerWatchers({
+        entityType:   'product',
+        eventType:    'low_stock',
+        entityId:     id,
+        title:        'Low Stock Alert',
+        message:      alertMsg,
+        numericValue: newStock,
+        details: {
+          'Product':       updated.name,
+          'SKU':           updated.sku,
+          'Current Stock': `${newStock} ${updated.unit}`,
+          'Reorder Level': `${updated.reorderLevel} ${updated.unit}`,
+          'Warehouse':     updated.warehouseLocation ?? '—',
+        },
       })
     }
 

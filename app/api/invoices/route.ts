@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createNotifications } from '@/lib/notifications'
+import { triggerWatchers } from '@/lib/watchers'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,16 +58,13 @@ export async function POST(req: NextRequest) {
       include: { salesOrder: { include: { customer: true } } },
     })
 
+    const customer = (invoice.salesOrder as any)?.customer?.name ?? 'a customer'
     if (isOverdue) {
-      await createNotifications({
-        title: 'Invoice Overdue',
-        message: `Invoice ${invoiceNumber} for ${(invoice.salesOrder as any)?.customer?.name ?? 'a customer'} is overdue.`,
-        type: 'INVOICE_OVERDUE',
-        entityType: 'invoice',
-        entityId: invoice.id,
-        roles: ['ADMIN', 'SALES_MANAGER'],
-      })
+      const overdueMsg = `Invoice ${invoiceNumber} for ${customer} is overdue.`
+      await createNotifications({ title: 'Invoice Overdue', message: overdueMsg, type: 'INVOICE_OVERDUE', entityType: 'invoice', entityId: invoice.id, roles: ['ADMIN', 'SALES_MANAGER'] })
+      await triggerWatchers({ entityType: 'invoice', eventType: 'overdue', entityId: invoice.id, title: 'Invoice Overdue', message: overdueMsg, details: { 'Invoice': invoiceNumber, 'Customer': customer, 'Amount': `$${amount}`, 'Due Date': dueDate } })
     }
+    await triggerWatchers({ entityType: 'invoice', eventType: 'created', entityId: invoice.id, title: 'New Invoice Created', message: `Invoice ${invoiceNumber} created for ${customer} — $${amount}`, details: { 'Invoice': invoiceNumber, 'Customer': customer, 'Amount': `$${amount}`, 'Status': paidStatus ?? 'UNPAID' } })
 
     return NextResponse.json(invoice, { status: 201 })
   } catch (err) {
