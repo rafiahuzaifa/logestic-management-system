@@ -1,9 +1,10 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import { prisma } from '@/lib/prisma'
+import { ProfileEditor } from '@/components/settings/ProfileEditor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { User, Shield, Database, Bell, Palette } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,131 +12,66 @@ export default async function SettingsPage() {
   const session = await getServerSession(authOptions)
   if (!session) redirect('/login')
 
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, name: true, email: true, role: true, createdAt: true },
+  })
+  if (!user) redirect('/login')
+
+  const roleLabel: Record<string, string> = {
+    ADMIN: 'Admin', WAREHOUSE_MANAGER: 'Warehouse Manager',
+    SALES_MANAGER: 'Sales Manager', LOGISTICS_OFFICER: 'Logistics Officer', VIEWER: 'Viewer',
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Settings</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Manage your account and application preferences</p>
+        <p className="text-sm text-gray-500">Manage your profile and account preferences</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Profile */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <User className="h-4 w-4 text-indigo-600" />Profile
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Name</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">{session.user?.name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Email</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">{session.user?.email}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-500">Role</span>
-              <Badge variant="default">{session.user?.role}</Badge>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <ProfileEditor user={{ id: user.id, name: user.name, email: user.email, role: user.role }} />
+        </div>
 
-        {/* Security */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Shield className="h-4 w-4 text-emerald-600" />Security
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Authentication</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">NextAuth v4 + JWT</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Session Strategy</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">JWT</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Password Hashing</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">bcrypt (12 rounds)</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Database */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Database className="h-4 w-4 text-sky-600" />Database
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">ORM</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">Prisma 7</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Database</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">PostgreSQL</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Provider</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">Neon (Serverless)</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Notifications */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Bell className="h-4 w-4 text-amber-600" />Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-500">Email Alerts</span>
-              <Badge variant="secondary">Configure in Alerts</Badge>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-500">Low Stock Alerts</span>
-              <Badge variant="warning">Active</Badge>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-500">Shipment Updates</span>
-              <Badge variant="default">Enabled</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* App Info */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Palette className="h-4 w-4 text-violet-600" />Application
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-            {[
-              ['Framework',   'Next.js 16'],
-              ['UI',          'Tailwind CSS v4'],
-              ['Charts',      'Recharts'],
-              ['State',       'React Query + Zustand'],
-              ['Auth',        'NextAuth v4'],
-              ['Forms',       'React Hook Form + Zod'],
-              ['Icons',       'Lucide React'],
-              ['Deployment',  'Vercel'],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <p className="text-gray-500">{label}</p>
-                <p className="font-medium text-gray-900 dark:text-gray-100 mt-0.5">{value}</p>
+        <div className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle className="text-sm">Account</CardTitle></CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Role</span>
+                <Badge variant="default">{roleLabel[user.role] ?? user.role}</Badge>
               </div>
-            ))}
-          </CardContent>
-        </Card>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Member since</span>
+                <span className="font-medium">{new Date(user.createdAt).toLocaleDateString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Auth</span>
+                <span className="font-medium">JWT Session</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-sm">System</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {[
+                ['App',        'Sharptel LSM'],
+                ['Framework',  'Next.js 16'],
+                ['Database',   'Neon PostgreSQL'],
+                ['ORM',        'Prisma 7'],
+                ['Deployment', 'Vercel'],
+              ].map(([k, v]) => (
+                <div key={k} className="flex justify-between">
+                  <span className="text-gray-500">{k}</span>
+                  <span className="font-medium">{v}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

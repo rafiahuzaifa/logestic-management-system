@@ -83,6 +83,8 @@ model Product {
   id                String   @id @default(cuid())
   name              String
   sku               String   @unique
+  barcode           String?  @unique
+  brand             String?
   categoryId        String
   unit              String
   price             Decimal  @db.Decimal(12, 2)
@@ -105,6 +107,8 @@ model Supplier {
   email        String  @unique
   phone        String?
   address      String?
+  country      String?
+  paymentTerms String?
   rating       Decimal @default(0) @db.Decimal(3, 1)
   leadTimeDays Int     @default(7)
 
@@ -156,11 +160,15 @@ model GRN {
 }
 
 model Customer {
-  id      String  @id @default(cuid())
-  name    String
-  email   String  @unique
-  phone   String?
-  address String?
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String?
+  address     String?
+  companyType String?
+  taxId       String?
+  creditLimit Decimal? @db.Decimal(14, 2)
+  createdAt   DateTime @default(now())
 
   salesOrders SalesOrder[]
 
@@ -206,6 +214,8 @@ model Invoice {
   amount        Decimal           @db.Decimal(14, 2)
   vendorCost    Decimal?          @db.Decimal(14, 2)
   paidStatus    InvoicePaidStatus @default(UNPAID)
+  dueDate       DateTime?
+  notes         String?
   createdAt     DateTime          @default(now())
 
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
@@ -235,13 +245,15 @@ model Carrier {
 }
 
 model Shipment {
-  id               String         @id @default(cuid())
-  salesOrderId     String
-  carrierId        String
-  trackingNumber   String?        @unique
-  status           ShipmentStatus @default(PENDING)
+  id                String         @id @default(cuid())
+  salesOrderId      String
+  carrierId         String
+  trackingNumber    String?        @unique
+  status            ShipmentStatus @default(PENDING)
   estimatedDelivery DateTime?
-  createdAt        DateTime       @default(now())
+  actualDelivery    DateTime?
+  notes             String?
+  createdAt         DateTime       @default(now())
 
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
   carrier    Carrier    @relation(fields: [carrierId], references: [id])

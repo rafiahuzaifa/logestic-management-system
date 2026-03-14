@@ -6,42 +6,36 @@ import { signOut, useSession } from 'next-auth/react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard,
-  Package,
-  Building2,
-  ShoppingCart,
-  Truck,
-  Warehouse,
-  TrendingUp,
-  BarChart3,
-  Bell,
-  Settings,
-  LogOut,
-  BoxIcon,
-  ChevronRight,
-  Receipt,
+  LayoutDashboard, Package, Building2, ShoppingCart, Truck,
+  Warehouse, TrendingUp, BarChart3, Bell, Settings, LogOut,
+  ChevronRight, Users, ClipboardList, Receipt, Zap,
 } from 'lucide-react'
 
 const navGroups = [
   {
     label: 'Main',
-    items: [
-      { href: '/dashboard',   label: 'Dashboard',       icon: LayoutDashboard },
-    ],
+    items: [{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
   },
   {
     label: 'Procurement',
     items: [
-      { href: '/suppliers',        label: 'Suppliers',        icon: Building2 },
-      { href: '/purchase-orders',  label: 'Purchase Orders',  icon: ShoppingCart },
+      { href: '/suppliers',       label: 'Suppliers',       icon: Building2 },
+      { href: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
+    ],
+  },
+  {
+    label: 'Sales',
+    items: [
+      { href: '/customers',    label: 'Customers',    icon: Users },
+      { href: '/sales-orders', label: 'Sales Orders', icon: ClipboardList },
     ],
   },
   {
     label: 'Operations',
     items: [
-      { href: '/inventory',   label: 'Inventory',   icon: Package },
-      { href: '/warehouses',  label: 'Warehouses',  icon: Warehouse },
-      { href: '/shipments',   label: 'Shipments',   icon: Truck },
+      { href: '/inventory',  label: 'Inventory',  icon: Package },
+      { href: '/warehouses', label: 'Warehouses', icon: Warehouse },
+      { href: '/shipments',  label: 'Shipments',  icon: Truck },
     ],
   },
   {
@@ -66,20 +60,22 @@ const navGroups = [
   },
 ]
 
-function NavItem({ href, label, icon: Icon, active }: { href: string; label: string; icon: React.ElementType; active: boolean }) {
+function NavItem({ href, label, icon: Icon, active }: {
+  href: string; label: string; icon: React.ElementType; active: boolean
+}) {
   return (
     <Link
       href={href}
       className={cn(
         'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
         active
-          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/40'
+          ? 'bg-[#387dff] text-white shadow-md shadow-blue-900/30'
           : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
       )}
     >
       <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-white' : 'text-slate-500 group-hover:text-slate-300')} />
       <span className="flex-1">{label}</span>
-      {active && <ChevronRight className="h-3 w-3 text-indigo-300" />}
+      {active && <ChevronRight className="h-3 w-3 text-blue-200" />}
     </Link>
   )
 }
@@ -93,23 +89,20 @@ export function Sidebar() {
     : 'U'
 
   const roleLabel: Record<string, string> = {
-    ADMIN: 'Admin',
-    WAREHOUSE_MANAGER: 'Warehouse Mgr',
-    SALES_MANAGER: 'Sales Mgr',
-    LOGISTICS_OFFICER: 'Logistics',
-    VIEWER: 'Viewer',
+    ADMIN: 'Admin', WAREHOUSE_MANAGER: 'Warehouse Mgr',
+    SALES_MANAGER: 'Sales Mgr', LOGISTICS_OFFICER: 'Logistics', VIEWER: 'Viewer',
   }
 
   return (
     <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-slate-950 border-r border-slate-800">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 border-b border-slate-800 px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 shadow-lg shadow-indigo-900/50">
-          <BoxIcon className="h-5 w-5 text-white" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#387dff] shadow-lg shadow-blue-900/50">
+          <Zap className="h-4 w-4 text-white" />
         </div>
         <div>
-          <p className="text-sm font-bold text-slate-100 leading-none">Supply Chain</p>
-          <p className="text-xs text-indigo-400 font-medium">Pro</p>
+          <p className="text-sm font-bold text-white leading-none">Sharptel</p>
+          <p className="text-xs text-[#387dff] font-medium">Innovating Solutions</p>
         </div>
       </div>
 
@@ -140,7 +133,7 @@ export function Sidebar() {
       {/* User Footer */}
       <div className="border-t border-slate-800 p-3">
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#387dff] text-xs font-bold text-white">
             {initials}
           </div>
           <div className="flex-1 overflow-hidden">
